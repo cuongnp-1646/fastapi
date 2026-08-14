@@ -1,0 +1,30 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from schemas.project import ProjectWithTasks
+from schemas.task import Task
+
+
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: str | None = None
+
+
+class User(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: str
+    full_name: str | None
+    created_at: datetime
+
+
+class UserProfile(User):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    projects: list[ProjectWithTasks] = []
+    assigned_tasks: list[Task] = Field(default_factory=list, validation_alias="tasks")
