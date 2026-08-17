@@ -23,6 +23,12 @@ class User(BaseModel):
     created_at: datetime
 
 
+class UserUpdate(BaseModel):
+    email: str | None = None
+    full_name: str | None = None
+    password: str | None = None
+
+
 class UserProfile(User):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
