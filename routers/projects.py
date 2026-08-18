@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 import crud
 import schemas
 from database import get_db
+from dependencies import verify_project_manager
+from models.project import Project
+from models.task import TaskPriority, TaskStatus
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -30,19 +33,26 @@ def read_project(project_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{project_id}/tasks", response_model=list[schemas.Task])
 def read_project_tasks(
-    project_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    status: TaskStatus | None = None,
+    priority: TaskPriority | None = None,
+    db: Session = Depends(get_db),
 ):
     if crud.get_project(db, project_id) is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    return crud.get_tasks_by_project(db, project_id, skip=skip, limit=limit)
+    return crud.get_tasks_by_project(
+        db, project_id, skip=skip, limit=limit, status=status, priority=priority
+    )
 
 
 @router.post("/{project_id}/tasks", response_model=schemas.Task)
 def create_project_task(
-    project_id: int, task: schemas.TaskCreateForProject, db: Session = Depends(get_db)
+    task: schemas.TaskCreateForProject,
+    project: Project = Depends(verify_project_manager),
+    db: Session = Depends(get_db),
 ):
-    if crud.get_project(db, project_id) is None:
-        raise HTTPException(status_code=404, detail="Project not found")
     if task.assignee_id is not None and crud.get_user(db, task.assignee_id) is None:
         raise HTTPException(status_code=404, detail="Assignee not found")
-    return crud.create_task_for_project(db, project_id, task)
+    return crud.create_task_for_project(db, project.id, task)

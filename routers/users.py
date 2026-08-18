@@ -8,7 +8,7 @@ import crud
 import schemas
 from crud.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, verify_admin_role
 from models.user import User
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -61,7 +61,12 @@ def update_current_user(
 
 
 @router.get("/", response_model=list[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(verify_admin_role),
+):
     return crud.get_users(db, skip=skip, limit=limit)
 
 

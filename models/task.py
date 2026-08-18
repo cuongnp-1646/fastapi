@@ -13,6 +13,12 @@ class TaskStatus(str, enum.Enum):
     DONE = "done"
 
 
+class TaskPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 task_tags = Table(
     "task_tags",
     Base.metadata,
@@ -30,6 +36,11 @@ class Task(Base):
     status: Mapped[TaskStatus] = mapped_column(
         Enum(TaskStatus), default=TaskStatus.TODO
     )
+    priority: Mapped[TaskPriority] = mapped_column(
+        Enum(TaskPriority),
+        default=TaskPriority.MEDIUM,
+        server_default=TaskPriority.MEDIUM.name,
+    )
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
     assignee_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True
@@ -44,3 +55,4 @@ class Task(Base):
     tags: Mapped[list["Tag"]] = relationship(
         secondary=task_tags, back_populates="tasks"
     )
+    bookmarked_by: Mapped[list["Bookmark"]] = relationship(back_populates="task")

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from models.user import UserRole
 from schemas.project import ProjectWithTasks
 from schemas.task import Task
 
@@ -20,6 +21,8 @@ class User(BaseModel):
     username: str
     email: str
     full_name: str | None
+    is_active: bool
+    role: UserRole
     created_at: datetime
 
 
