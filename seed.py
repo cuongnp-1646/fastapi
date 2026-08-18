@@ -6,11 +6,15 @@ from models.comment import Comment
 from models.project import Project
 from models.tag import Tag
 from models.task import Task, TaskStatus
-from models.user import User
+from models.user import User, UserRole
 
 
 def get_or_create_user(
-    db: Session, username: str, email: str, full_name: str
+    db: Session,
+    username: str,
+    email: str,
+    full_name: str,
+    role: UserRole = UserRole.MEMBER,
 ) -> User:
     user = db.query(User).filter(User.username == username).first()
     if user is not None:
@@ -20,6 +24,7 @@ def get_or_create_user(
         email=email,
         hashed_password=hash_password("password123"),
         full_name=full_name,
+        role=role,
     )
     db.add(user)
     db.commit()
@@ -103,6 +108,9 @@ def seed() -> None:
         alice = get_or_create_user(db, "alice", "alice@example.com", "Alice Nguyen")
         bob = get_or_create_user(db, "bob", "bob@example.com", "Bob Tran")
         carol = get_or_create_user(db, "carol", "carol@example.com", "Carol Le")
+        admin = get_or_create_user(
+            db, "admin", "admin@example.com", "Admin User", role=UserRole.ADMIN
+        )
 
         bug_tag = get_or_create_tag(db, "bug")
         feature_tag = get_or_create_tag(db, "feature")
@@ -151,7 +159,10 @@ def seed() -> None:
         )
 
         print("Seed data ready:")
-        print(f"  Users: {alice.username}, {bob.username}, {carol.username}")
+        print(
+            f"  Users: {alice.username}, {bob.username}, {carol.username}, "
+            f"{admin.username} (role=admin, password=password123)"
+        )
         print(f"  Projects: {website.name}, {mobile.name}")
         print(f"  Tasks: {design_task.title}, {fix_task.title}, {api_task.title}")
     finally:

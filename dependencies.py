@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 import crud
 from database import get_db
-from models.user import User
+from models.project import Project
+from models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
@@ -29,3 +30,39 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
+        )
+    return current_user
+
+
+def verify_admin_role(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required"
+        )
+    return current_user
+
+
+def verify_project_manager(
+    project_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> Project:
+    project = crud.get_project(db, project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    if current_user.id != project.owner_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner or an admin can perform this action",
+        )
+    return project
