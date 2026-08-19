@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from models.task import TaskPriority, TaskStatus
+from schemas.comment import Comment as CommentSchema
 
 
 class TaskCreate(BaseModel):
@@ -22,6 +23,10 @@ class TaskCreateForProject(BaseModel):
     assignee_id: int | None = None
 
 
+class TaskAssign(BaseModel):
+    assignee_id: int
+
+
 class Task(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,3 +38,4 @@ class Task(BaseModel):
     project_id: int
     assignee_id: int | None
     created_at: datetime
+    comments: list[CommentSchema] = []

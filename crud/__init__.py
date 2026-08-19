@@ -1,4 +1,5 @@
 from crud.bookmark import create_bookmark, get_bookmark
+from crud.comment import create_comment, delete_comment, get_comment, update_comment
 from crud.item import create_item, get_item, get_items
 from crud.project import create_project, get_project, get_projects
 from crud.security import create_access_token, decode_access_token
@@ -23,6 +24,10 @@ from crud.user import (
 __all__ = [
     "create_bookmark",
     "get_bookmark",
+    "create_comment",
+    "delete_comment",
+    "get_comment",
+    "update_comment",
     "create_item",
     "get_item",
     "get_items",

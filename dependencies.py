@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 import crud
 from database import get_db
+from models.comment import Comment
 from models.project import Project
+from models.task import Task
 from models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
@@ -66,3 +68,46 @@ def verify_project_manager(
             detail="Only the project owner or an admin can perform this action",
         )
     return project
+
+
+def verify_task_manager(
+    task_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> Task:
+    task = crud.get_task(db, task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    project = crud.get_project(db, task.project_id)
+    if current_user.id != project.owner_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner or an admin can perform this action",
+        )
+    return task
+
+
+def verify_comment_owner(
+    task_id: int,
+    comment_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> Comment:
+    comment = crud.get_comment(db, comment_id)
+    if comment is None or comment.task_id != task_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
+        )
+    if current_user.id == comment.author_id or current_user.role == UserRole.ADMIN:
+        return comment
+    task = crud.get_task(db, task_id)
+    if task is not None:
+        project = crud.get_project(db, task.project_id)
+        if current_user.id == project.owner_id:
+            return comment
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the comment author, the project owner, or an admin can perform this action",
+    )

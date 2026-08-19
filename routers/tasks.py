@@ -5,8 +5,13 @@ from sqlalchemy.orm import Session
 import crud
 import schemas
 from database import get_db
-from dependencies import get_current_active_user
-from models.task import TaskPriority, TaskStatus
+from dependencies import (
+    get_current_active_user,
+    verify_comment_owner,
+    verify_task_manager,
+)
+from models.comment import Comment
+from models.task import Task, TaskPriority, TaskStatus
 from models.user import User
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -54,3 +59,46 @@ def bookmark_task(
         return crud.create_bookmark(db, current_user.id, task_id)
     except IntegrityError:
         raise HTTPException(status_code=400, detail="Task already bookmarked")
+
+
+@router.post("/{task_id}/assign", response_model=schemas.Task)
+def assign_task(
+    assignment: schemas.TaskAssign,
+    task: Task = Depends(verify_task_manager),
+    db: Session = Depends(get_db),
+):
+    if crud.get_user(db, assignment.assignee_id) is None:
+        raise HTTPException(status_code=404, detail="Assignee not found")
+    task.assignee_id = assignment.assignee_id
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+@router.post("/{task_id}/comments", response_model=schemas.Comment, status_code=201)
+def create_comment(
+    task_id: int,
+    comment: schemas.CommentCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if crud.get_task(db, task_id) is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return crud.create_comment(db, task_id, current_user.id, comment.content)
+
+
+@router.put("/{task_id}/comments/{comment_id}", response_model=schemas.Comment)
+def update_comment(
+    comment_update: schemas.CommentUpdate,
+    comment: Comment = Depends(verify_comment_owner),
+    db: Session = Depends(get_db),
+):
+    return crud.update_comment(db, comment, comment_update.content)
+
+
+@router.delete("/{task_id}/comments/{comment_id}", status_code=204)
+def delete_comment(
+    comment: Comment = Depends(verify_comment_owner),
+    db: Session = Depends(get_db),
+):
+    crud.delete_comment(db, comment)
