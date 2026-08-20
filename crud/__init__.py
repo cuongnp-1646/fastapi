@@ -3,6 +3,7 @@ from crud.comment import create_comment, delete_comment, get_comment, update_com
 from crud.item import create_item, get_item, get_items
 from crud.project import create_project, get_project, get_projects
 from crud.security import create_access_token, decode_access_token
+from crud.tag import get_tags
 from crud.task import (
     create_task,
     create_task_for_project,
@@ -36,6 +37,7 @@ __all__ = [
     "get_projects",
     "create_access_token",
     "decode_access_token",
+    "get_tags",
     "create_task",
     "create_task_for_project",
     "get_task",
