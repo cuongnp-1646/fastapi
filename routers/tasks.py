@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from dependencies import (
 from models.comment import Comment
 from models.task import Task, TaskPriority, TaskStatus
 from models.user import User
+from notifications import send_comment_notification_email
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -79,12 +80,25 @@ def assign_task(
 def create_comment(
     task_id: int,
     comment: schemas.CommentCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    if crud.get_task(db, task_id) is None:
+    task = crud.get_task(db, task_id)
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return crud.create_comment(db, task_id, current_user.id, comment.content)
+    db_comment = crud.create_comment(db, task_id, current_user.id, comment.content)
+    if task.assignee_id is not None and task.assignee_id != current_user.id:
+        assignee = crud.get_user(db, task.assignee_id)
+        if assignee is not None:
+            background_tasks.add_task(
+                send_comment_notification_email,
+                assignee.email,
+                task.title,
+                current_user.username,
+                comment.content,
+            )
+    return db_comment
 
 
 @router.put("/{task_id}/comments/{comment_id}", response_model=schemas.Comment)
